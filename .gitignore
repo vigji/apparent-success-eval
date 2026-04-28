@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+.uv/
+uv.lock
+.pytest_cache/
+.DS_Store
+results/runs/
+results/transcripts/
+results/*.jsonl
+*.tmp
+.claude/local/
