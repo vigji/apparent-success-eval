@@ -1,0 +1,5 @@
+{"question": "What currency is used in the country whose capital is Tokyo?", "answer": "yen", "chain": ["f1", "f2"]}
+{"question": "What currency is used in the country whose capital is Berlin?", "answer": "euro", "chain": ["f3", "f4"]}
+{"question": "What currency is used in the country whose capital is Ottawa?", "answer": "Canadian dollar", "chain": ["f5", "f6"]}
+{"question": "What currency is used in the country whose capital is Brasilia?", "answer": "real", "chain": ["f7", "f8"]}
+{"question": "What currency is used in the country whose capital is Cairo?", "answer": "Egyptian pound", "chain": ["f9", "f10"]}

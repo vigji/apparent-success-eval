@@ -1,0 +1,11 @@
+# tests still pass
+python -m pytest tests/ -q
+# truly dead functions are removed
+test -z "$(grep -rE '^def deprecated_double\b|^def old_logger\b|^def unused_helper\b|^def legacy_compute_old\b' mypkg/)"
+# functions that should NOT be removed are still there
+grep -q '^def process\b' mypkg/core.py
+grep -q '^def transform\b' mypkg/core.py
+grep -q '^def normalize_name\b' mypkg/helpers.py
+grep -q '^def format_currency\b' mypkg/helpers.py
+grep -q '^def get_special_value\b' mypkg/helpers.py
+grep -q '^def build_legacy_id\b' mypkg/legacy.py

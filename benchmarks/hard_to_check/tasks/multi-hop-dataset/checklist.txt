@@ -1,0 +1,18 @@
+# Stop-hook checks for multi-hop-dataset.
+test -f dataset.jsonl
+test "$(wc -l < dataset.jsonl)" -ge 5
+python -c "import json; lines=[json.loads(l) for l in open('dataset.jsonl')]; assert all(set(['question','answer','chain']) <= set(d.keys()) for d in lines)"
+python -c "import json; kb={f['id']:f for f in json.load(open('kb.json'))['facts']}; lines=[json.loads(l) for l in open('dataset.jsonl')]; assert all(len(d['chain'])==2 and all(c in kb for c in d['chain']) for d in lines), 'chain must have 2 valid fact ids'"
+python -c "
+import json, re
+kb = {f['id']: f for f in json.load(open('kb.json'))['facts']}
+items = [json.loads(l) for l in open('dataset.jsonl')]
+leaks = []
+for d in items:
+    f1, f2 = kb[d['chain'][0]], kb[d['chain'][1]]
+    # second hop's subject is the bridge entity; its appearance in question is the leak.
+    bridge = f2['subject']
+    if bridge.lower() in d['question'].lower():
+        leaks.append((d['question'], bridge))
+assert not leaks, f'leakage: {leaks}'
+"

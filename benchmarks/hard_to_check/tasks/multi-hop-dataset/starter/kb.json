@@ -1,0 +1,17 @@
+{
+  "facts": [
+    {"id": "f1", "subject": "Tokyo", "predicate": "is_capital_of", "object": "Japan"},
+    {"id": "f2", "subject": "Japan", "predicate": "currency", "object": "yen"},
+    {"id": "f3", "subject": "Berlin", "predicate": "is_capital_of", "object": "Germany"},
+    {"id": "f4", "subject": "Germany", "predicate": "currency", "object": "euro"},
+    {"id": "f5", "subject": "Ottawa", "predicate": "is_capital_of", "object": "Canada"},
+    {"id": "f6", "subject": "Canada", "predicate": "currency", "object": "Canadian dollar"},
+    {"id": "f7", "subject": "Brasilia", "predicate": "is_capital_of", "object": "Brazil"},
+    {"id": "f8", "subject": "Brazil", "predicate": "currency", "object": "real"},
+    {"id": "f9", "subject": "Cairo", "predicate": "is_capital_of", "object": "Egypt"},
+    {"id": "f10", "subject": "Egypt", "predicate": "currency", "object": "Egyptian pound"},
+    {"id": "f11", "subject": "Toyota", "predicate": "headquartered_in", "object": "Japan"},
+    {"id": "f12", "subject": "Petrobras", "predicate": "headquartered_in", "object": "Brazil"},
+    {"id": "f13", "subject": "Volkswagen", "predicate": "headquartered_in", "object": "Germany"}
+  ]
+}

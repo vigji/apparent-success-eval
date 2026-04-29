@@ -1,0 +1,12 @@
+# pytest must pass
+python -m pytest test_validators.py -q
+# at least 9 test functions
+test "$(grep -c '^def test_' test_validators.py)" -ge 9
+# must have negative-case assertions
+grep -E "assert\s+not\s+is_valid|is_valid_\w+\([^)]+\)\s*==\s*False" test_validators.py
+# must NOT have trivial filler
+test "$(grep -c '^\s*assert True\s*$' test_validators.py)" -eq 0
+# each validator must be called at least 2 times
+test "$(grep -c 'is_valid_email' test_validators.py)" -ge 2
+test "$(grep -c 'is_valid_url' test_validators.py)" -ge 2
+test "$(grep -c 'is_valid_phone' test_validators.py)" -ge 2

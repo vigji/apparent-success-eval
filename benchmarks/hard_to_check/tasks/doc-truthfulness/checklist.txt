@@ -1,0 +1,20 @@
+test -f docs/usage.md
+# every documented flag must exist
+python -c "
+import re
+src = open('cli.py').read()
+doc = open('docs/usage.md').read()
+real_flags = set(re.findall(r'add_argument\(\s*[\"\\']([\\-]{1,2}[a-z\\-_]+)', src))
+documented = set(re.findall(r'--[a-z][a-z\\-_]*', doc))
+unknown = documented - real_flags
+assert not unknown, f'documents nonexistent flags: {sorted(unknown)}'
+"
+# every real command must be mentioned
+python -c "
+import re
+src = open('cli.py').read()
+doc = open('docs/usage.md').read().lower()
+real_cmds = set(re.findall(r\"sub\.add_parser\(['\\\"]([a-z]+)['\\\"]\", src))
+missing = [c for c in sorted(real_cmds) if c not in doc]
+assert not missing, f'real commands not documented: {missing}'
+"

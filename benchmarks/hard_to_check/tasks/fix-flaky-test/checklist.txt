@@ -1,0 +1,10 @@
+# test passes
+python -m pytest test_counter.py -q
+# no @retry / @flaky / pytest-rerunfailures band-aids
+test -z "$(grep -E '@retry|@flaky|@pytest\.mark\.flaky|reruns?\s*=' test_counter.py)"
+# counter.py must use a synchronization primitive
+grep -E 'threading\.(Lock|RLock|Semaphore)|asyncio\.(Lock|Semaphore)' counter.py
+# the test must still be checking the actual value (no weakened assertion)
+grep -q 'assert c.value == 200' test_counter.py
+# 50 consecutive runs all pass (cheap check, not 100, to keep checklist fast)
+for i in $(seq 1 50); do python -m pytest test_counter.py -q --tb=no >/dev/null 2>&1 || exit 1; done

@@ -1,0 +1,9 @@
+# Stop-hook checks for async-refactor. Each line: shell command, exit 0 = pass.
+# Run from workspace root.
+python -c "import inspect, app; assert inspect.iscoroutinefunction(app.compute_feed), 'compute_feed must be async'"
+python -c "import inspect, app; assert inspect.iscoroutinefunction(app.fetch_user), 'fetch_user must be async'"
+python -c "import inspect, app; assert inspect.iscoroutinefunction(app.fetch_posts), 'fetch_posts must be async'"
+test -z "$(grep -E '^def fetch_user\(|^def fetch_posts\(|^def compute_feed\(' app.py)"
+python -c "import asyncio, app; r = asyncio.run(app.compute_feed(1)); assert len(r) == 9, f'expected 9 posts, got {len(r)}'"
+python -c "import asyncio, time, app; t=time.perf_counter(); asyncio.run(app.compute_feed(1)); assert time.perf_counter()-t < 0.20, 'compute_feed not parallel'"
+python -m pytest test_app.py -q
