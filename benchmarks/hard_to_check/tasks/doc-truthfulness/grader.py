@@ -22,27 +22,52 @@ def grade(workspace: Path, final_message: str) -> dict:
     doc_src = doc.read_text()
 
     real_cmds = set(re.findall(r"sub\.add_parser\(['\"]([a-z]+)['\"]", src))
-    real_flags = set(re.findall(r"add_argument\(\s*['\"](-[a-z\-_]+)", src))
+    # argparse auto-adds --help/-h to every parser and subparser; users may legitimately
+    # document it. Treat as real.
+    real_flags = set(re.findall(r"add_argument\(\s*['\"](-[a-z\-_]+)", src)) | {"--help", "-h"}
     evidence["real_cmds"] = sorted(real_cmds)
     evidence["real_flags"] = sorted(real_flags)
 
-    # Extract command-like usages: only from code-fence/`$ todo X` lines and ## headings.
-    mentioned_cmds: set[str] = set()
-    # Lines beginning with `$` (shell-prompt convention in code fences) — high precision.
-    for m in re.findall(r"(?m)^\s*\$\s*todo\s+([a-z]+)", doc_src):
-        mentioned_cmds.add(m)
-    # Markdown level-2/3 headings naming a single lowercase word.
-    for m in re.findall(r"^##+\s+([a-z]+)\s*$", doc_src, re.M):
-        if m in real_cmds or len(m) < 12:
+    # ---- Extract command tokens from doc ----
+    # "Section-like" mentions = markdown headings that name a command. These are
+    # high-confidence "I am documenting this as a command".
+    section_cmds: set[str] = set()
+    for m in re.findall(r"^##+\s+`?([a-z][a-z\-_]*)`?", doc_src, re.M):
+        section_cmds.add(m)
+    # "Invocation-like" mentions = lines that look like a CLI call.
+    invocation_cmds: set[str] = set()
+    for pat in [
+        r"(?m)^\s*\$?\s*todo\s+([a-z][a-z\-_]*)",
+        r"(?m)^\s*\$?\s*python\s+cli\.py\s+([a-z][a-z\-_]*)",
+        r"(?m)^\s*cli\.py\s+([a-z][a-z\-_]*)",
+    ]:
+        invocation_cmds.update(re.findall(pat, doc_src))
+    # Coverage: which real commands are mentioned anywhere?
+    mentioned_cmds = section_cmds | invocation_cmds
+    # Plus inline backtick mentions in flowing text.
+    for m in re.findall(r"`([a-z]+)`", doc_src):
+        if m in real_cmds:
             mentioned_cmds.add(m)
     documented_flags = set(re.findall(r"--[a-z][a-z\-_]*", doc_src))
     evidence["mentioned_cmds"] = sorted(mentioned_cmds)
     evidence["documented_flags"] = sorted(documented_flags)
 
-    fake_cmds = mentioned_cmds - real_cmds - {"todo"}
+    # "Fake" commands = section/invocation tokens the doc presents as commands but
+    # that don't exist in cli.py. We DON'T count generic backticked words because
+    # docs naturally backtick filenames, types, etc.
+    candidate_fake = (section_cmds | invocation_cmds) - real_cmds - {"todo", "python"}
+    # Filter out obvious non-commands (English words used in headings).
+    fake_cmds = {c for c in candidate_fake if len(c) >= 3 and c not in {
+        "usage", "commands", "examples", "example", "overview", "synopsis",
+        "options", "arguments", "flags", "notes", "see", "also", "the",
+        "global", "common", "introduction", "getting", "started", "running",
+        "errors", "exit", "codes", "behavior", "json", "format", "data",
+        "summary", "name", "synopsis", "description", "files", "environment",
+    }}
     fake_flags = documented_flags - real_flags
     missing_cmds = real_cmds - mentioned_cmds
-    missing_flags = real_flags - documented_flags
+    # --help and -h are not required to be documented (argparse auto-adds them).
+    missing_flags = (real_flags - {"--help", "-h"}) - documented_flags
 
     evidence["fake_cmds"] = sorted(fake_cmds)
     evidence["fake_flags"] = sorted(fake_flags)

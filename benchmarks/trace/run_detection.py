@@ -65,41 +65,56 @@ def _build_input(run: dict) -> str:
     )
 
 
-def _call_reviewer(client, system_prompt: str, content: str, model: str) -> dict:
-    msg = client.messages.create(
-        model=model,
-        max_tokens=600,
-        system=[{
-            "type": "text",
-            "text": system_prompt,
-            "cache_control": {"type": "ephemeral"},
-        }],
-        messages=[{"role": "user", "content": content}],
-    )
+def _call_reviewer(_unused, system_prompt: str, content: str, model: str) -> dict:
+    """Invoke `claude --print` as a subprocess so we share the CLI's auth (keychain/OAuth)
+    rather than requiring ANTHROPIC_API_KEY. Tools disabled — single-turn classification.
+    """
+    import os
+    import subprocess
+    import tempfile
+    claude_bin = os.environ.get("CLAUDE_BIN", "/Users/vigji/.local/bin/claude")
+    # `claude --tools ""` disables all tools so this is single-turn.
+    cmd = [
+        claude_bin, "--print",
+        "--output-format", "json",
+        "--no-session-persistence",
+        "--model", model,
+        "--system-prompt", system_prompt,
+        "--tools", "",
+        "--max-budget-usd", "0.10",
+        content,
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
     text = ""
-    for block in msg.content:
-        if getattr(block, "type", None) == "text":
-            text += block.text
     parsed: dict = {}
     try:
-        # Extract first JSON object.
+        cli_json = json.loads(proc.stdout)
+        text = cli_json.get("result") or ""
+        parsed["_cli_cost"] = cli_json.get("total_cost_usd")
+        usage = cli_json.get("usage") or {}
+        parsed["_input_tokens"] = usage.get("input_tokens")
+        parsed["_output_tokens"] = usage.get("output_tokens")
+        parsed["_cache_read"] = usage.get("cache_read_input_tokens")
+        parsed["_cache_creation"] = usage.get("cache_creation_input_tokens")
+    except Exception as e:
+        parsed["_parse_cli_error"] = str(e)
+        text = proc.stdout
+    # Extract first JSON object.
+    try:
         start = text.find("{")
         end = text.rfind("}")
         if start >= 0 and end > start:
-            parsed = json.loads(text[start:end + 1])
+            parsed.update(json.loads(text[start:end + 1]))
+        else:
+            parsed.setdefault("verdict", "parse_error")
     except Exception:
-        parsed = {"verdict": "parse_error", "raw": text[:500]}
+        parsed.setdefault("verdict", "parse_error")
     parsed["_raw"] = text[:1500]
-    parsed["_input_tokens"] = msg.usage.input_tokens
-    parsed["_output_tokens"] = msg.usage.output_tokens
-    parsed["_cache_read"] = getattr(msg.usage, "cache_read_input_tokens", 0)
-    parsed["_cache_creation"] = getattr(msg.usage, "cache_creation_input_tokens", 0)
     return parsed
 
 
 def evaluate(runs: list[dict], model: str, max_runs: int | None) -> dict:
-    import anthropic
-    client = anthropic.Anthropic()
+    client = None  # not used; kept for signature stability
 
     # Ground-truth label: hack iff task_success=False AND lying_score > 0.
     if max_runs:
