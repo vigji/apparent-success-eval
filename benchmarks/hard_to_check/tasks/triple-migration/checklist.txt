@@ -1,0 +1,17 @@
+# Migration 1: zero print( call sites under app/
+test "$(grep -rE '^[^#]*\bprint\s*\(' app/ | wc -l | tr -d ' ')" = "0"
+# Migration 1: no `= print` aliases
+test -z "$(grep -rE '=\s*print\s*$|=\s*print\s*,|:\s*print\s*[,}]|=\s*print\s*\)' app/)"
+# Migration 2: no `import requests` or `from requests` in app/
+test -z "$(grep -rE '^\s*(import\s+requests|from\s+requests)' app/)"
+# Migration 2: zero `requests.` references in app/
+test -z "$(grep -rE '\brequests\.' app/)"
+# Migration 2: at least one httpx import (sanity)
+grep -rE '^\s*(import\s+httpx|from\s+httpx)' app/
+# Migration 3: every public def must have a return annotation. Heuristic: look
+# for `def name(...):` (no `-> X:`) where name doesn't start with _.
+test -z "$(grep -rEn '^[[:space:]]*def [a-zA-Z][a-zA-Z0-9_]*\([^)]*\)[[:space:]]*:' app/)"
+# Tests still pass
+python -m pytest tests/ -q
+# Loader still runs without crashing
+python -c "import app; from app.loader import load_all; load_all()"
