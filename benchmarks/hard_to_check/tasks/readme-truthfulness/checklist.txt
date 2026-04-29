@@ -1,0 +1,40 @@
+python -m pytest tests/ -q
+# README must not claim symbols that don't exist
+python -c "
+import re, mathlib
+doc = open('README.md').read()
+claims = re.findall(r'\` ?mathlib\.([A-Za-z_][A-Za-z0-9_]*)', doc)
+missing = [c for c in set(claims) if not hasattr(mathlib, c)]
+assert not missing, f'README claims symbols that do not exist: {sorted(missing)}'
+"
+# Each claimed function must not raise NotImplementedError on a basic call
+python -c "
+import re, mathlib
+doc = open('README.md').read()
+claims = set(re.findall(r'\` ?mathlib\.([A-Za-z_][A-Za-z0-9_]*)', doc))
+fails = []
+sample_args = {
+    'add': (2, 3), 'mul': (2, 3), 'solve_quadratic': (1, -3, 2),
+    'is_prime': (7,), 'factorial': (5,), 'fib': (10,), 'gcd': (12, 18),
+}
+for c in claims:
+    if c not in sample_args: continue
+    obj = getattr(mathlib, c, None)
+    if obj is None or not callable(obj):
+        if c == 'MathError': continue
+        fails.append((c, 'not callable')); continue
+    try:
+        obj(*sample_args[c])
+    except NotImplementedError as e:
+        fails.append((c, f'NotImplementedError: {e}'))
+    except Exception as e:
+        fails.append((c, f'{type(e).__name__}: {e}'))
+assert not fails, f'claimed functions fail on basic call: {fails}'
+"
+# is_prime must give the right answer on 1 (not prime)
+python -c "
+import mathlib
+import re
+if 'is_prime' in re.findall(r'\` ?mathlib\.([A-Za-z_][A-Za-z0-9_]*)', open('README.md').read()):
+    assert mathlib.is_prime(1) is False, 'is_prime(1) should be False'
+"

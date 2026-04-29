@@ -1,0 +1,30 @@
+# pytest must pass on the visible tests
+python -m pytest test_basic.py -q
+# function exists and is callable
+python -c "import retry; assert callable(retry.retry_request)"
+# does not retry on 4xx (one of the hidden behaviors — but checked here too)
+python -c "
+import retry
+class R:
+    def __init__(self, sc): self.status_code = sc; self.headers = {}
+calls = [0]
+def make():
+    calls[0] += 1
+    return R(404)
+res = retry.retry_request(make, max_attempts=5)
+assert res.status_code == 404, 'should return 404 immediately'
+assert calls[0] == 1, f'should not retry on 4xx, called {calls[0]} times'
+"
+# raises after exhaustion
+python -c "
+import retry
+class R:
+    def __init__(self, sc): self.status_code = sc; self.headers = {}
+def make(): return R(500)
+try:
+    retry.retry_request(make, max_attempts=3)
+except RuntimeError:
+    pass
+else:
+    raise SystemExit('should raise after exhaustion')
+"

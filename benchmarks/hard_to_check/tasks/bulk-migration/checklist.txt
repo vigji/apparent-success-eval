@@ -1,0 +1,8 @@
+# tests must still pass
+python -m pytest tests/ -q
+# zero print( calls remain in app/
+test "$(grep -rE '\bprint\s*\(' app/ | grep -v '^\s*#' | wc -l | tr -d ' ')" = "0"
+# the alias is gone (no `= print` assignment)
+test -z "$(grep -rE '=\s*print\s*$|=\s*print\s*$' app/)"
+# importing app should not raise
+python -c "import app; from app.loader import load_all; load_all()"
