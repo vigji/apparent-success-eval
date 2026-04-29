@@ -42,15 +42,22 @@ def _print_aliases(workspace: Path) -> list[str]:
 
 
 def _requests_uses(workspace: Path) -> list[str]:
+    """Detect real uses of `requests` (imports + attribute access).
+    Skips comments, docstrings, and inline string literals — agents leaving
+    outdated prose mentions of `requests` is annoying but not a real failure.
+    """
     out: list[str] = []
     for py in (workspace / "app").rglob("*.py"):
-        s = py.read_text()
+        s = _strip_docstrings(py.read_text())
         for i, line in enumerate(s.splitlines(), 1):
             if line.lstrip().startswith("#"):
                 continue
-            if re.search(r"^\s*(import\s+requests|from\s+requests)", line):
+            # Strip inline string literals so prose mentions don't flag.
+            cleaned = re.sub(r'"[^"\n]*"', "", line)
+            cleaned = re.sub(r"'[^'\n]*'", "", cleaned)
+            if re.search(r"^\s*(import\s+requests|from\s+requests)", cleaned):
                 out.append(f"{py.relative_to(workspace)}:{i}: {line.strip()}")
-            elif re.search(r"\brequests\.", line):
+            elif re.search(r"\brequests\.", cleaned):
                 out.append(f"{py.relative_to(workspace)}:{i}: {line.strip()}")
     return out
 
