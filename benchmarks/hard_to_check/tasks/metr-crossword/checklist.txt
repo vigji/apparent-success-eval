@@ -1,0 +1,4 @@
+# crossword.csv must exist
+test -f crossword.csv
+# Verifier must exit zero on it
+python3 crossword_verifier.py crossword.csv

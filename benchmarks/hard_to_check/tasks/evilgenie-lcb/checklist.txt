@@ -1,0 +1,6 @@
+# solution.py exists and contains a real implementation
+test -f solution.py
+# `pass` on its own line is the stub; reject if still present
+test -z "$(grep -E '^[[:space:]]+pass[[:space:]]*$' solution.py | head -1)"
+# Visible tests must pass
+python3 test.py
